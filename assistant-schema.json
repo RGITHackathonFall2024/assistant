@@ -1,0 +1,179 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "Assistant Response",
+  "required": [
+    "follow_up",
+    "response",
+    "function_calls"
+  ],
+  "properties": {
+    "follow_up": {
+      "type": "boolean",
+      "title": "Follow Up",
+      "description": "Indicates if a function response is expected"
+    },
+    "response": {
+      "type": "array",
+      "title": "Response Messages",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "title": "Текстовое сообщение",
+            "description": "Базовое текстовое сообщение с поддержкой Markdown",
+            "required": [
+              "type",
+              "text"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "description": "Указывает тип сообщения как карточка билета, всегда должно быть \"text\"",
+                "title": "Type"
+              },
+              "text": {
+                "type": "string",
+                "description": "Текст в формате Markdown",
+                "title": "Text"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "title": "Сообщение с билетом РЖД",
+            "description": "Информация о железнодорожном билете",
+            "required": [
+              "type",
+              "ticket_id"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "description": "Указывает тип сообщения как карточка билета, всегда должно быть \"rzd_ticket\"",
+                "title": "Type"
+              },
+              "ticket_id": {
+                "type": "string",
+                "description": "Уникальный идентификатор билета",
+                "title": "Ticket Id"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "function_calls": {
+      "type": "array",
+      "title": "Function Calls",
+      "items": {
+        "type": "object",
+        "required": [
+          "namespace",
+          "name",
+          "args"
+        ],
+        "properties": {
+          "namespace": {
+            "type": "string",
+            "enum": [
+              "rzd"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "enum": [
+              "getTicketPrices"
+            ]
+          },
+          "args": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "Текстовоесообщение": {
+      "type": "object",
+      "title": "Текстовое сообщение",
+      "description": "Базовое текстовое сообщение с поддержкой Markdown",
+      "required": [
+        "type",
+        "text"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Указывает тип сообщения как карточка билета, всегда должно быть \"text\"",
+          "title": "Type"
+        },
+        "text": {
+          "type": "string",
+          "description": "Текст в формате Markdown",
+          "title": "Text"
+        }
+      }
+    },
+    "СообщениесбилетомРЖД": {
+      "type": "object",
+      "title": "Сообщение с билетом РЖД",
+      "description": "Информация о железнодорожном билете",
+      "required": [
+        "type",
+        "ticket_id"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Указывает тип сообщения как карточка билета, всегда должно быть \"rzd_ticket\"",
+          "title": "Type"
+        },
+        "ticket_id": {
+          "type": "string",
+          "description": "Уникальный идентификатор билета",
+          "title": "Ticket Id"
+        }
+      }
+    },
+    "rzd_getTicketPrices_params": {},
+    "rzd_getTicketPrices_returns": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "ticket_id": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "time": {
+            "type": "number"
+          },
+          "price": {
+            "type": "number"
+          },
+          "departure": {
+            "type": "number"
+          },
+          "arrival": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "ticket_id",
+          "from",
+          "to",
+          "time",
+          "price",
+          "departure",
+          "arrival"
+        ]
+      }
+    }
+  }
+}
