@@ -55,11 +55,15 @@
         "properties": {
           "namespace": {
             "type": "string",
-            "enum": []
+            "enum": [
+              "tututrains"
+            ]
           },
           "name": {
             "type": "string",
-            "enum": []
+            "enum": [
+              "queryStations"
+            ]
           },
           "args": {
             "type": "object"
@@ -88,6 +92,26 @@
           "description": "Текст в формате Markdown",
           "title": "Text"
         }
+      }
+    },
+    "tututrains_queryStations_params": {},
+    "tututrains_queryStations_returns": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "description": "Объект ЖД стацнии",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "value"
+        ]
       }
     }
   }

@@ -1,4 +1,5 @@
 import { writeFileSync } from 'node:fs';
+import { tutuQueryStations } from '../src/apis/tutu';
 
 // Types for the function schem
 
@@ -16,7 +17,7 @@ interface FunctionParameter {
     items?: FunctionParameter;
 }
 
-interface FunctionSchema {
+export interface FunctionSchema {
     name: string;
     namespace: string;
     description: string;
@@ -27,6 +28,8 @@ interface FunctionSchema {
         items?: FunctionParameter;
     };
 }
+
+export type FunctionSchemaWithHandler = FunctionSchema & {handler: (data: any) => Promise<any>}
 
 interface MessageType {
     name: string;
@@ -39,7 +42,6 @@ interface MessageType {
 }
 
 interface ConfigSchema {
-    assistantName: string;
     description: string;
     functions: FunctionSchema[];
     messageTypes: MessageType[];
@@ -167,7 +169,7 @@ function toTitleCase(str: string): string {
 
 function generateMarkdown(config: ConfigSchema): string {
     let md = `# Конфигурация ассистента
-Вы - ${config.assistantName}, ИИ-ассистент, ${config.description}. Все ответы предоставляются исключительно в формате JSON согласно определённым схемам.
+Вы - Ранчер, ИИ-ассистент, ${config.description}. Все ответы предоставляются исключительно в формате JSON согласно определённым схемам.
 
 # Формат ответа
 Каждый ответ должен следовать следующей базовой структуре:
@@ -195,44 +197,34 @@ function generateMarkdown(config: ConfigSchema): string {
     });
 
     // Generate functions documentation
-    // md += '\n# Доступные функции\n';
+    md += '\n# Доступные функции\n';
     
-    // config.functions.forEach(func => {
-    //     md += `\n## ${func.namespace}.${func.name}\n`;
-    //     md += `${func.description}\n\n`;
+    config.functions.forEach(func => {
+        md += `\n## ${func.namespace}.${func.name}\n`;
+        md += `${func.description}\n\n`;
         
-    //     // Parameters
-    //     md += '### Параметры:\n```json\n';
-    //     md += JSON.stringify(func.parameters, null, 4);
-    //     md += '\n```\n';
+        // Parameters
+        md += '### Параметры:\n```json\n';
+        md += JSON.stringify(func.parameters, null, 4);
+        md += '\n```\n';
         
-    //     // Return type
-    //     md += '\n### Структура ответа:\n```json\n';
-    //     md += JSON.stringify(func.returns, null, 4);
-    //     md += '\n```\n';
-    // });
+        // Return type
+        md += '\n### Структура ответа:\n```json\n';
+        md += JSON.stringify(func.returns, null, 4);
+        md += '\n```\n';
+    });
 
     md += '\n# Доп правила\n';
     md += `# Важные правила форматирования ответов
 
-## Правило работы с билетами
-1. При ответе с информацией о билетах:
-- Сначала добавьте текстовое сообщение с общей информацией
-- Затем добавьте каждый билет как отдельный объект типа RzdTicketMessage
-- НЕ ВКЛЮЧАЙТЕ информацию о билетах в текстовое сообщение
-
-## Что НЕ нужно делать
-- НЕ включайте информацию о билетах в текстовое сообщение
-- НЕ форматируйте билеты как список в текстовом сообщении
-- НЕ объединяйте несколько билетов в одно текстовое описание
-
 # Правила валидации ответа
 Перед отправкой ответа убедитесь, что:
 1. Каждый билет представлен отдельным объектом
-2. В текстовом сообщении нет технической информации о билетах
-3. Все временные метки корректно преобразованы в Unix timestamp
-4. Длительность поездки указана в часах как числовое значение
-5. Если информации недостаточно не отправляйте больше запросов follow_up просто ответьте к примеру "Я не нашёл билетов на эту дату, возможно вы хотите изменить дату?" и всё, ожидайте информации от пользователя.
+2. Все временные метки корректно преобразованы в Unix timestamp
+3. Если информации недостаточно не отправляйте больше запросов follow_up просто ответьте к примеру "Я не нашёл билетов на эту дату, возможно вы хотите изменить дату?" и всё, ожидайте информации от пользователя.
+4. Если вы хотите узнать информацию например о станциях или билетах вызывайте доступные вам функции в follow_up запросах тогда вы получите ответ в свой промпт.
+5. Не вызывай follow_up без функций
+6. Если получил пустой массив или ошибку оповести пользователя об ошибке.
 
 ## Пример правильного ответа с билетами
 \`\`\`json
@@ -262,7 +254,6 @@ function generateMarkdown(config: ConfigSchema): string {
 }
 
 const sampleConfig: ConfigSchema = {
-    assistantName: "Ранчер",
     description: "созданный для помощи студентам",
     messageTypes: [
         {
@@ -282,7 +273,7 @@ const sampleConfig: ConfigSchema = {
         }
     ],
     functions: [
- 
+        tutuQueryStations
     ]
 };
 

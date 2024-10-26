@@ -37,11 +37,11 @@ export interface AIResponse {
 export class AIContextManager {
     private schema: string;
     private baseMessages: ChatCompletionMessageParam[];
-    private tools: Record<string, (args: any) => Promise<any>>;
+    private tools: Record<string, {handler: (args: any) => Promise<any>}>;
     private model: string;
     private client: Groq;
 
-    constructor(client: Groq, tools: Record<string, (args: any) => Promise<any>>, model = "llama3-70b-8192") {
+    constructor(client: Groq, tools: Record<string, {handler: (args: any) => Promise<any>}>, model = "llama3-70b-8192") {
         this.tools = tools;
         this.model = model;
         this.baseMessages = [];
@@ -90,7 +90,7 @@ export class AIContextManager {
             console.log(`[TOOLS] Executing ${functionName}:`, call.args);
             
             try {
-                const response = await this.tools[functionName](call.args);
+                const response = await this.tools[functionName].handler(call.args);
                 return {
                     function: functionName,
                     response
@@ -102,7 +102,7 @@ export class AIContextManager {
         }));
     }
 
-    async execute(request: UserMessage | FollowUpMessage, messageCallback: (message: ChatCompletionMessageParam) => void, context?: ChatCompletionMessageParam[]): Promise<ExecutionResult> {
+    async execute(request: UserMessage | FollowUpMessage, messageCallback: (message: ChatCompletionMessageParam) => void = () => {}, context?: ChatCompletionMessageParam[]): Promise<ExecutionResult> {
         const messages = context || this.baseMessages;
         
         console.log(`[USER] Executing:`, request);
