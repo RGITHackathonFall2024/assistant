@@ -2,12 +2,14 @@ import type { ChatCompletionCreateParamsNonStreaming, ChatCompletionMessageParam
 import { promises as fs } from 'fs';
 import type Groq from 'groq-sdk';
 
-interface UserMessage {
+export interface UserMessage {
     type: "user_message";
     content: string;
+    env_info: any;
+    user_info: any;
 }
 
-interface FollowUpMessage {
+export interface FollowUpMessage {
     type: "follow_up";
     responses: Array<{
         function: string;
@@ -15,18 +17,18 @@ interface FollowUpMessage {
     }>;
 }
 
-interface ExecutionResult {
+export interface ExecutionResult {
     response: string;
     messages: ChatCompletionMessageParam[];
 }
 
-interface FunctionCall {
+export interface FunctionCall {
     namespace: string;
     name: string;
     args: any;
 }
 
-interface AIResponse {
+export interface AIResponse {
     response: string;
     follow_up: boolean;
     function_calls?: FunctionCall[];
