@@ -195,22 +195,22 @@ function generateMarkdown(config: ConfigSchema): string {
     });
 
     // Generate functions documentation
-    md += '\n# Доступные функции\n';
+    // md += '\n# Доступные функции\n';
     
-    config.functions.forEach(func => {
-        md += `\n## ${func.namespace}.${func.name}\n`;
-        md += `${func.description}\n\n`;
+    // config.functions.forEach(func => {
+    //     md += `\n## ${func.namespace}.${func.name}\n`;
+    //     md += `${func.description}\n\n`;
         
-        // Parameters
-        md += '### Параметры:\n```json\n';
-        md += JSON.stringify(func.parameters, null, 4);
-        md += '\n```\n';
+    //     // Parameters
+    //     md += '### Параметры:\n```json\n';
+    //     md += JSON.stringify(func.parameters, null, 4);
+    //     md += '\n```\n';
         
-        // Return type
-        md += '\n### Структура ответа:\n```json\n';
-        md += JSON.stringify(func.returns, null, 4);
-        md += '\n```\n';
-    });
+    //     // Return type
+    //     md += '\n### Структура ответа:\n```json\n';
+    //     md += JSON.stringify(func.returns, null, 4);
+    //     md += '\n```\n';
+    // });
 
     md += '\n# Доп правила\n';
     md += `# Важные правила форматирования ответов

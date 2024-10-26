@@ -4,26 +4,64 @@ import fs from "fs/promises";
 import type { ChatCompletionCreateParamsNonStreaming } from 'groq-sdk/resources/chat/completions.mjs';
 import { generateMockTickets } from './mock';
 import type { FollowUpMessage } from './gen';
-import { AIContextManager, type UserMessage } from './ai';
+import { AIContextManager, type Message, type ToolFunction, type UserMessage } from './ai';
 
 const client = new Groq({
     apiKey: process.env['GROQ_API_KEY'],
 });
 
-let tools: Record<string, (data: any) => Promise<any>> = {
-    "rzd.getTicketPrices": async (data: any) => {
-        let query: { from: string, to: string, when: { from: string, to: string | null } } = data.query;
-        console.log("[TOOLS] AI tried to search tickets from", query.from, "to", query.to, "on date from", query.when.from, query.when.to ? `to date ${query.when.to}` : '');
-        return generateMockTickets(query.from, query.to, 2, 5)
+let tools: Record<string, {
+    function: ToolFunction;
+    description: string;
+    parameters: {
+        properties: Record<string, {
+            type: string;
+            description: string;
+            enum?: string[];
+        }>;
+        required: string[];
+    };
+}> = {
+    "rzd.getTicketPrices": {
+        function: async (data: any) => {
+            let query: { from: string, to: string, from_date: string, to_date: string | undefined} = data;
+            console.log("[TOOLS] AI tried to search tickets from", query.from, "to", query.to, "on date from", query.from_date, query.to_date ? `to date ${query.to_date}` : '');
+            return generateMockTickets(query.from, query.to, 2, 5)
+        },
+        description: "Получает информацию о доступных билетах на поезд",
+        parameters: {
+            properties: {
+                from: {
+                    type: "string",
+                    description: "Место отправления (город или станция)",
+                },
+                to: {
+                    type: "string",
+                    description: "Место прибытия (город или станция)",
+                },
+
+                from_date: {
+                    type: "string",
+                    description: "Начальная дата"
+                },
+                to_date: {
+                    type: "string",
+                    description: "Конечная дата",
+                }
+            },
+            required: ["from", "to", "from_date"]
+        }
+
     }
 }
 
 async function main(request: UserMessage | FollowUpMessage) {
     const ai = new AIContextManager(client, tools, "llama3-70b-8192");
 
-    await ai.initialize();
-
-    await ai.execute(request)
+    await ai.initialize(await fs.readFile("assistant-config.md", "utf-8"));
+    await ai.execute(request, (message: Message) => {
+        console.log(`[APP] got ${message.role} message, ${message.content}`);
+    });
 }
 
 main({
