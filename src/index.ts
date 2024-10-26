@@ -1,58 +1,16 @@
 import Groq from 'groq-sdk';
 import "dotenv/config";
 import fs from "fs/promises";
-import type { ChatCompletionCreateParamsNonStreaming } from 'groq-sdk/resources/chat/completions.mjs';
-import { generateMockTickets } from './mock';
 import type { FollowUpMessage } from './gen';
-import { AIContextManager, type Message, type ToolFunction, type UserMessage } from './ai';
+import { AIContextManager, type Message, type ToolFunction, type Tools, type UserMessage } from './ai';
+import { apiTools } from './apis';
 
 const client = new Groq({
     apiKey: process.env['GROQ_API_KEY'],
 });
 
-let tools: Record<string, {
-    function: ToolFunction;
-    description: string;
-    parameters: {
-        properties: Record<string, {
-            type: string;
-            description: string;
-            enum?: string[];
-        }>;
-        required: string[];
-    };
-}> = {
-    "rzd.getTicketPrices": {
-        function: async (data: any) => {
-            let query: { from: string, to: string, from_date: string, to_date: string | undefined} = data;
-            console.log("[TOOLS] AI tried to search tickets from", query.from, "to", query.to, "on date from", query.from_date, query.to_date ? `to date ${query.to_date}` : '');
-            return generateMockTickets(query.from, query.to, 2, 5)
-        },
-        description: "Получает информацию о доступных билетах на поезд",
-        parameters: {
-            properties: {
-                from: {
-                    type: "string",
-                    description: "Место отправления (город или станция)",
-                },
-                to: {
-                    type: "string",
-                    description: "Место прибытия (город или станция)",
-                },
-
-                from_date: {
-                    type: "string",
-                    description: "Начальная дата"
-                },
-                to_date: {
-                    type: "string",
-                    description: "Конечная дата",
-                }
-            },
-            required: ["from", "to", "from_date"]
-        }
-
-    }
+let tools: Tools = {
+    ...apiTools
 }
 
 async function main(request: UserMessage | FollowUpMessage) {

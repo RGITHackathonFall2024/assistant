@@ -46,6 +46,19 @@ export interface Tool {
     };
 }
 
+export type Tools = Record<string, {
+    function: ToolFunction;
+    description: string;
+    parameters: {
+        properties: Record<string, {
+            type: string;
+            description: string;
+            enum?: string[];
+        }>;
+        required: string[];
+    };
+}>;
+
 export type ToolFunction = (args: any) => Promise<any>;
 
 export class AIContextManager {
