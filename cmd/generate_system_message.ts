@@ -1,5 +1,4 @@
 import { writeFileSync } from 'node:fs';
-import { tutuQueryStations, tutuQueryTickets } from '../src/apis/tutu';
 import { rzdQueryStations, rzdQueryTickets } from '../src/apis/rzd';
 
 // Types for the function schem
@@ -277,8 +276,6 @@ const sampleConfig: ConfigSchema = {
         }
     ],
     functions: [
-        // tutuQueryStations,
-        // tutuQueryTickets
         rzdQueryStations,
         rzdQueryTickets
     ]
