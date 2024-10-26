@@ -10,7 +10,7 @@ const client = new Groq({
     apiKey: process.env['GROQ_API_KEY'],
 });
 
-const ai = new AIContextManager(client, apiTools, "llama3-70b-8192");
+const ai = new AIContextManager(client, apiTools);
 let env_info = {
     current_date: new Date().toLocaleDateString("ru")
 };
@@ -22,7 +22,7 @@ let hello = { role: "assistant", content: JSON.stringify({follow_up: false, resp
 await ai.initialize([hello]);
 console.log(await ai.execute({
     type: "user_message",
-    content: "Привет, найди ID станции по запросу Ростов.",
+    content: "Посмотри билеты из Москвы в Питер на послезавтра",
     env_info,
     user_info
 }))

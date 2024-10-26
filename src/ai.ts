@@ -41,7 +41,7 @@ export class AIContextManager {
     private model: string;
     private client: Groq;
 
-    constructor(client: Groq, tools: Record<string, {handler: (args: any) => Promise<any>}>, model = "llama3-70b-8192") {
+    constructor(client: Groq, tools: Record<string, {handler: (args: any) => Promise<any>}>, model = "llama-3.2-90b-vision-preview") {
         this.tools = tools;
         this.model = model;
         this.baseMessages = [];
@@ -68,7 +68,7 @@ export class AIContextManager {
         return {
             messages,
             model: this.model,
-            temperature: 0,
+            temperature: 0.1,
             max_tokens: 8000,
             top_p: 1,
             stream: false,
@@ -97,7 +97,10 @@ export class AIContextManager {
                 };
             } catch (error) {
                 console.error(`[ERROR] Failed to execute ${functionName}:`, error);
-                throw error;
+                return {
+                    function: functionName,
+                    response: "Function failsed to execute"
+                }
             }
         }));
     }

@@ -25,7 +25,7 @@ app.use(cors());
 
 io.on("connect", async (sock) => {
     const log = (...data: any) => console.log(`[socket:${sock.id}]`, ...data);
-    const ai = new AIContextManager(client, tools, "llama3-70b-8192");
+    const ai = new AIContextManager(client, tools, "llama-3.1-8b-instant");
     let env_info = {
         current_date: new Date().toLocaleDateString("ru")
     };

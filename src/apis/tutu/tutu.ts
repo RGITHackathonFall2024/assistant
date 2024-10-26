@@ -1,5 +1,6 @@
 
 import axios from "axios";
+import fs from "node:fs/promises"
 import type { TutuTrains } from "../../types/tutu_trains";
 
 export interface Station {
@@ -26,11 +27,15 @@ export type RailwayStationSuggestions = RailwayStationSuggestion[];
 
 export async function getRailwayStationSuggestions(query: string): Promise<RailwayStationSuggestions> {
     const response = await axios.get<RailwayStationSuggestions>(`https://www.tutu.ru/suggest/railway_simple/?name=${encodeURIComponent(query)}`);
-    return response.data;
+    return response.data.filter(i => +i.id%1000!==0);
 }
 
 export async function getTrains(term1Express: number, term2Express: number): Promise<TutuTrains> {
     const response = await axios.get<TutuTrains>(`https://suggest.travelpayouts.com/search?service=tutu_trains&term=${term1Express}&term2=${term2Express}`);
-    return response.data;
+    let d = response.data;
+    if (Array.isArray(d)) return d;
+    d.url = `https://tutu.ru${d.url}` 
+    return d;
 }
+
 

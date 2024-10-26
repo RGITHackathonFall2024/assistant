@@ -29,13 +29,40 @@
             "properties": {
               "type": {
                 "type": "string",
-                "description": "Указывает тип сообщения как карточка билета, всегда должно быть \"text\"",
+                "description": "Указывает тип сообщения как текст, всегда должно быть \"text\"",
                 "title": "Type"
               },
               "text": {
                 "type": "string",
                 "description": "Текст в формате Markdown",
                 "title": "Text"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "title": "Сообщение кнопка с ссылкой",
+            "description": "Кнопка имеющая текст и ведущая на другой сайт",
+            "required": [
+              "type",
+              "text",
+              "url"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "description": "Указывает тип сообщения как кнопка, всегда должно быть \"button_url\"",
+                "title": "Type"
+              },
+              "text": {
+                "type": "string",
+                "description": "Текст кнопки",
+                "title": "Text"
+              },
+              "url": {
+                "type": "string",
+                "description": "Ссылка куда кнопка ведёт",
+                "title": "Url"
               }
             }
           }
@@ -56,13 +83,14 @@
           "namespace": {
             "type": "string",
             "enum": [
-              "tututrains"
+              "rzdtrains"
             ]
           },
           "name": {
             "type": "string",
             "enum": [
-              "queryStations"
+              "queryStations",
+              "queryTickets"
             ]
           },
           "args": {
@@ -84,7 +112,7 @@
       "properties": {
         "type": {
           "type": "string",
-          "description": "Указывает тип сообщения как карточка билета, всегда должно быть \"text\"",
+          "description": "Указывает тип сообщения как текст, всегда должно быть \"text\"",
           "title": "Type"
         },
         "text": {
@@ -94,25 +122,182 @@
         }
       }
     },
-    "tututrains_queryStations_params": {},
-    "tututrains_queryStations_returns": {
+    "Сообщениекнопкасссылкой": {
+      "type": "object",
+      "title": "Сообщение кнопка с ссылкой",
+      "description": "Кнопка имеющая текст и ведущая на другой сайт",
+      "required": [
+        "type",
+        "text",
+        "url"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Указывает тип сообщения как кнопка, всегда должно быть \"button_url\"",
+          "title": "Type"
+        },
+        "text": {
+          "type": "string",
+          "description": "Текст кнопки",
+          "title": "Text"
+        },
+        "url": {
+          "type": "string",
+          "description": "Ссылка куда кнопка ведёт",
+          "title": "Url"
+        }
+      }
+    },
+    "rzdtrains_queryStations_params": {},
+    "rzdtrains_queryStations_returns": {
       "type": "array",
       "items": {
         "type": "object",
-        "description": "Объект ЖД стацнии",
         "properties": {
-          "id": {
+          "expressCode": {
             "type": "string"
           },
-          "value": {
+          "region": {
+            "type": "string"
+          },
+          "name": {
             "type": "string"
           }
         },
         "required": [
-          "id",
-          "value"
+          "expressCode",
+          "region",
+          "name"
         ]
       }
+    },
+    "rzdtrains_queryTickets_params": {},
+    "rzdtrains_queryTickets_returns": {
+      "type": "object",
+      "properties": {
+        "trains": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "display_name": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              },
+              "origin": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "code": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "code"
+                ]
+              },
+              "destination": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "code": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "code"
+                ]
+              },
+              "prices": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "min_price": {
+                      "type": "number"
+                    },
+                    "max_price": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "min_price",
+                    "max_price"
+                  ]
+                }
+              },
+              "duration": {
+                "type": "string"
+              },
+              "distance": {
+                "type": "number"
+              },
+              "departure": {
+                "type": "object",
+                "properties": {
+                  "local": {
+                    "type": "string"
+                  },
+                  "normal": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "local",
+                  "normal"
+                ]
+              },
+              "arrival": {
+                "type": "object",
+                "properties": {
+                  "local": {
+                    "type": "string"
+                  },
+                  "normal": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "local",
+                  "normal"
+                ]
+              }
+            },
+            "required": [
+              "display_name",
+              "url",
+              "origin",
+              "destination",
+              "prices",
+              "duration",
+              "distance",
+              "departure",
+              "arrival"
+            ]
+          }
+        },
+        "url": {
+          "type": "string",
+          "description": "Ссылка для просмотра всех билетов"
+        }
+      },
+      "required": [
+        "trains",
+        "url"
+      ]
     }
   }
 }
