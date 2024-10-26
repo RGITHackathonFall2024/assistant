@@ -38,27 +38,6 @@
                 "title": "Text"
               }
             }
-          },
-          {
-            "type": "object",
-            "title": "Сообщение с билетом РЖД",
-            "description": "Информация о железнодорожном билете",
-            "required": [
-              "type",
-              "ticket_id"
-            ],
-            "properties": {
-              "type": {
-                "type": "string",
-                "description": "Указывает тип сообщения как карточка билета, всегда должно быть \"rzd_ticket\"",
-                "title": "Type"
-              },
-              "ticket_id": {
-                "type": "string",
-                "description": "Уникальный идентификатор билета",
-                "title": "Ticket Id"
-              }
-            }
           }
         ]
       }
@@ -76,15 +55,11 @@
         "properties": {
           "namespace": {
             "type": "string",
-            "enum": [
-              "rzd"
-            ]
+            "enum": []
           },
           "name": {
             "type": "string",
-            "enum": [
-              "getTicketPrices"
-            ]
+            "enum": []
           },
           "args": {
             "type": "object"
@@ -113,66 +88,6 @@
           "description": "Текст в формате Markdown",
           "title": "Text"
         }
-      }
-    },
-    "СообщениесбилетомРЖД": {
-      "type": "object",
-      "title": "Сообщение с билетом РЖД",
-      "description": "Информация о железнодорожном билете",
-      "required": [
-        "type",
-        "ticket_id"
-      ],
-      "properties": {
-        "type": {
-          "type": "string",
-          "description": "Указывает тип сообщения как карточка билета, всегда должно быть \"rzd_ticket\"",
-          "title": "Type"
-        },
-        "ticket_id": {
-          "type": "string",
-          "description": "Уникальный идентификатор билета",
-          "title": "Ticket Id"
-        }
-      }
-    },
-    "rzd_getTicketPrices_params": {},
-    "rzd_getTicketPrices_returns": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "ticket_id": {
-            "type": "string"
-          },
-          "from": {
-            "type": "string"
-          },
-          "to": {
-            "type": "string"
-          },
-          "time": {
-            "type": "number"
-          },
-          "price": {
-            "type": "number"
-          },
-          "departure": {
-            "type": "number"
-          },
-          "arrival": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "ticket_id",
-          "from",
-          "to",
-          "time",
-          "price",
-          "departure",
-          "arrival"
-        ]
       }
     }
   }

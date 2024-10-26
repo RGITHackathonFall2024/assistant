@@ -279,72 +279,10 @@ const sampleConfig: ConfigSchema = {
                     required: true
                 }
             }
-        },
-        {
-            name: "Сообщение с билетом РЖД",
-            description: "Информация о железнодорожном билете",
-            properties: {
-                type: {
-                    type: "string",
-                    description: "Указывает тип сообщения как карточка билета, всегда должно быть \"rzd_ticket\"",
-                },
-                ticket_id: {
-                    type: "string",
-                    description: "Уникальный идентификатор билета"
-                }
-            }
         }
     ],
     functions: [
-        {
-            name: "getTicketPrices",
-            namespace: "rzd",
-            description: "Получает информацию о доступных билетах на поезд",
-            parameters: {
-                query: {
-                    type: "object",
-                    properties: {
-                        from: {
-                            type: "string",
-                            description: "Место отправления (город или станция)",
-                        },
-                        to: {
-                            type: "string",
-                            description: "Место прибытия (город или станция)",
-                        },
-                        when: {
-                            type: "object",
-                            properties: {
-                                from: {
-                                    type: "string",
-                                    description: "Начальная дата"
-                                },
-                                to: {
-                                    type: "string",
-                                    description: "Конечная дата",
-                                    required: false
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            returns: {
-                type: "array",
-                items: {
-                    type: "object",
-                    properties: {
-                        ticket_id: { type: "string" },
-                        from: { type: "string" },
-                        to: { type: "string" },
-                        time: { type: "number" },
-                        price: { type: "number" },
-                        departure: { type: "number" },
-                        arrival: { type: "number" }
-                    }
-                }
-            }
-        }
+ 
     ]
 };
 

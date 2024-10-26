@@ -1,15 +1,12 @@
 import Groq from 'groq-sdk';
 import "dotenv/config";
-import fs from "fs/promises";
-import type { FollowUpMessage } from '../src/gen';
-import { AIContextManager, type UserMessage } from '../src/ai';
+import { AIContextManager } from '../src/ai';
 import { apiTools } from '../src/apis';
 import { createServer } from "http";
 import express from "express";
 import { Server } from 'socket.io';
 import cors from "cors";
-import type { ChatCompletionMessage, ChatCompletionMessageParam } from 'groq-sdk/resources/chat/completions.mjs';
-import { getTicketInfo } from '../src/apis/rzd/getTicket';
+import type { ChatCompletionMessageParam } from 'groq-sdk/resources/chat/completions.mjs';
 
 const client = new Groq({
     apiKey: process.env['GROQ_API_KEY'],
@@ -63,10 +60,6 @@ io.on("connect", async (sock) => {
         });
     });
 });
-
-app.get("/rzd/ticket/:ticket_id", async (req, res) => {
-    res.status(200).json(getTicketInfo(req.params.ticket_id));
-})
 
 server.listen(3000, '0.0.0.0', 511, () => {
     console.log("[API] Serving on :3000");
