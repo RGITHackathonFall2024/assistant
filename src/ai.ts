@@ -110,9 +110,10 @@ export class AIContextManager {
         });
     }
 
-    async initialize(systemPrompt: string): Promise<void> {
+    async initialize(systemPrompt: string, messages: Message[] = []): Promise<void> {
         this.baseMessages = [
-            { role: 'system', content: systemPrompt }
+            { role: 'system', content: systemPrompt },
+            ...messages
         ];
     }
 
