@@ -1,4 +1,14 @@
-export function generateMockTickets(from: string, to: string, minCount = 5, maxCount = 15) {
+export type Ticket = {
+    ticket_id: string;
+    from: string;
+    to: string;
+    time: number;
+    price: number;
+    departure: number;
+    arrival: number;
+};
+
+export function generateMockTickets(from: string, to: string, minCount = 5, maxCount = 15): Ticket[] {
     const count = Math.floor(Math.random() * (maxCount - minCount + 1)) + minCount;
     const currentDate = new Date();
     

@@ -1,11 +1,6 @@
-import type Groq from "groq-sdk";
-
-export interface Message {
-    role: 'system' | 'user' | 'assistant' | 'tool';
-    content: string;
-    tool_call_id?: string;
-    name?: string;
-}
+import type { ChatCompletionCreateParamsNonStreaming, ChatCompletionMessageParam } from 'groq-sdk/resources/chat/completions.mjs';
+import { promises as fs } from 'fs';
+import type Groq from 'groq-sdk';
 
 export interface UserMessage {
     type: "user_message";
@@ -14,122 +9,88 @@ export interface UserMessage {
     user_info: any;
 }
 
-export interface ToolCallResponse {
-    function: string;
-    response: any;
-}
-
 export interface FollowUpMessage {
     type: "follow_up";
-    responses: ToolCallResponse[];
+    responses: Array<{
+        function: string;
+        response: any;
+    }>;
 }
 
 export interface ExecutionResult {
     response: string;
-    messages: Message[];
+    messages: ChatCompletionMessageParam[];
 }
 
-export interface Tool {
-    type: "function";
-    function: {
-        name: string;
-        description: string;
-        parameters: {
-            type: "object";
-            properties: Record<string, {
-                type: string;
-                description: string;
-                enum?: string[];
-            }>;
-            required: string[];
-        };
-    };
+export interface FunctionCall {
+    namespace: string;
+    name: string;
+    args: any;
 }
 
-export type Tools = Record<string, {
-    function: ToolFunction;
-    description: string;
-    parameters: {
-        properties: Record<string, {
-            type: string;
-            description: string;
-            enum?: string[];
-        }>;
-        required: string[];
-    };
-}>;
-
-export type ToolFunction = (args: any) => Promise<any>;
+export interface AIResponse {
+    response: string;
+    follow_up: boolean;
+    function_calls?: FunctionCall[];
+}
 
 export class AIContextManager {
-    private client: Groq;
-    private baseMessages: Message[];
-    private tools: Tool[];
-    private toolFunctions: Record<string, ToolFunction>;
+    private schema: string;
+    private baseMessages: ChatCompletionMessageParam[];
+    private tools: Record<string, (args: any) => Promise<any>>;
     private model: string;
+    private client: Groq;
 
-    constructor(
-        client: Groq,
-        tools: Record<string, {
-            function: ToolFunction;
-            description: string;
-            parameters: {
-                properties: Record<string, {
-                    type: string;
-                    description: string;
-                    enum?: string[];
-                }>;
-                required: string[];
-            };
-        }>,
-        model = "llama3-groq-70b-8192-tool-use-preview"
-    ) {
-        this.client = client;
+    constructor(client: Groq, tools: Record<string, (args: any) => Promise<any>>, model = "llama3-70b-8192") {
+        this.tools = tools;
         this.model = model;
         this.baseMessages = [];
-        this.toolFunctions = {};
-        this.tools = [];
-        
-        // Convert provided tools into GROQ API format
-        this.tools = Object.entries(tools).map(([name, config]) => ({
-            type: "function",
-            function: {
-                name,
-                description: config.description,
-                parameters: {
-                    type: "object",
-                    properties: config.parameters.properties,
-                    required: config.parameters.required
-                }
-            }
-        }));
-        
-        // Store tool functions separately
-        Object.entries(tools).forEach(([name, config]) => {
-            this.toolFunctions[name] = config.function;
-        });
+        this.schema = "";
+        this.client = client;
     }
 
-    async initialize(systemPrompt: string, messages: Message[] = []): Promise<void> {
+    async initialize(messages: ChatCompletionMessageParam[]): Promise<void> {
+        // Load schema and configuration files
+        this.schema = await fs.readFile("assistant-schema.json", "utf-8");
+        const config = await fs.readFile("assistant-config.md", "utf-8");
+        
         this.baseMessages = [
-            { role: 'system', content: systemPrompt },
+            { role: 'system', content: config },
+            { 
+                role: 'system', 
+                content: `Ты ассистент который отвечает только в JSON\nJSON должен быть следущей схемы: ${this.schema}`
+            },
             ...messages
         ];
     }
 
-    private async executeFunctionCalls(toolCalls: any[]): Promise<ToolCallResponse[]> {
-        return await Promise.all(toolCalls.map(async (call) => {
-            const functionName = call.function.name;
+    private createChatRequest(messages: ChatCompletionMessageParam[]): ChatCompletionCreateParamsNonStreaming {
+        return {
+            messages,
+            model: this.model,
+            temperature: 0,
+            max_tokens: 8000,
+            top_p: 1,
+            stream: false,
+            response_format: {
+                type: "json_object"
+            },
+            stop: null
+        };
+    }
+
+    private async executeFunctionCalls(functionCalls: FunctionCall[]): Promise<Array<{function: string, response: any}>> {
+        return await Promise.all(functionCalls.map(async (call) => {
+            const functionName = `${call.namespace}.${call.name}`;
             
-            if (!(functionName in this.toolFunctions)) {
+            if (!(functionName in this.tools)) {
                 throw new Error(`Unknown function: ${functionName}`);
             }
             
-            console.log(`[TOOLS] Executing ${functionName}:`, call.function.arguments);
+            console.log(`[TOOLS] Executing ${functionName}:`, call.args);
             
             try {
-                const args = JSON.parse(call.function.arguments);
-                const response = await this.toolFunctions[functionName](args);
+                const response = await this.tools[functionName](call.args);
                 return {
                     function: functionName,
                     response
@@ -141,68 +102,42 @@ export class AIContextManager {
         }));
     }
 
-    async execute(request: UserMessage | FollowUpMessage, messageCallback?: (message: Message) => void,context?: Message[]): Promise<ExecutionResult> {
+    async execute(request: UserMessage | FollowUpMessage, messageCallback: (message: ChatCompletionMessageParam) => void, context?: ChatCompletionMessageParam[]): Promise<ExecutionResult> {
         const messages = context || this.baseMessages;
         
         console.log(`[USER] Executing:`, request);
         
         // Prepare chat request
-        const chatRequest = {
-            model: this.model,
-            messages: [
-                ...messages,
-                { role: 'user', content: JSON.stringify(request) }
-            ],
-            tools: this.tools,
-            tool_choice: "auto",
-            temperature: 0,
-            max_tokens: 4096
-        };
+        const chatRequest = this.createChatRequest([
+            ...messages,
+            { role: 'user', content: JSON.stringify(request) }
+        ]);
 
         // Get AI response
-        const completion = await this.client.chat.completions.create(chatRequest as unknown as any);
-        const responseMessage = completion.choices[0].message;
+        const completion = await this.client.chat.completions.create(chatRequest);
+        const aiResponse: AIResponse = JSON.parse(completion.choices[0].message.content!);
 
-        // Check for tool calls
-        if (responseMessage.tool_calls) {
-            console.log("[AI] Tool calls detected");
-            
-            // Add the assistant's response to messages
-            messages.push(responseMessage as Message);
-            if (messageCallback) messageCallback(responseMessage as Message)
-            
-            // Execute all tool calls
-            const functionResponses = await this.executeFunctionCalls(responseMessage.tool_calls);
-            
-            // Add tool responses to messages
-            responseMessage.tool_calls.forEach((toolCall: any, index: number) => {
-                messages.push({
-                    role: 'tool',
-                    tool_call_id: toolCall.id,
-                    name: toolCall.function.name,
-                    content: JSON.stringify(functionResponses[index].response)
-                });
-            });
-            
-            // Make second request with tool results
-            const secondResponse = await this.client.chat.completions.create({
-                model: this.model,
-                messages: messages as any[]
-            });
-            if (messageCallback) messageCallback({role: "assistant", content: secondResponse.choices[0].message.content!})
-            
+        if (messageCallback) messageCallback(completion.choices[0].message);
+        // Handle direct response
+        if (!aiResponse.follow_up) {
+            console.log(`[AI] Direct response:`, aiResponse.response);
             return {
-                response: secondResponse.choices[0].message.content!,
-                messages: messages
+                response: aiResponse.response,
+                messages: [...chatRequest.messages, {
+                    role: "assistant",
+                    content: JSON.stringify(aiResponse)
+                }]
             };
         }
 
-        // Direct response without tool use
-        if (messageCallback) messageCallback(responseMessage as Message)
-
-        return {
-            response: responseMessage.content!,
-            messages: [...messages, responseMessage as Message]
-        };
+        // Handle follow-up with function calls
+        console.log("[AI] Follow-up with function calls");
+        const functionResponses = await this.executeFunctionCalls(aiResponse.function_calls!);
+        
+        // Recursive call with function responses
+        return this.execute({
+            type: "follow_up",
+            responses: functionResponses
+        }, messageCallback, chatRequest.messages);
     }
 }

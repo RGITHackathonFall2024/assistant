@@ -1,0 +1,9 @@
+services:
+  typesense:
+    image: typesense/typesense:28.0.rc9
+    restart: on-failure
+    command: '--data-dir /data --api-key=rgit --enable-cors'
+    volumes:
+      - ./data/typesense:/data
+    ports:
+      - "7223:8108"
