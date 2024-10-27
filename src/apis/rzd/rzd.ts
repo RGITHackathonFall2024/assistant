@@ -9,9 +9,7 @@ export async function getRZDSuggests(query: string): Promise<RzdSuggests> {
 }
 
 export async function getRZDTrainPrices(origin: number, destination: number, departureDate: Date) {
-    console.log(departureDate)
     let url = `https://ticket.rzd.ru/api/v1/railway-service/prices/train-pricing?service_provider=B2B_RZD&origin=${origin}&destination=${destination}&departureDate=${departureDate.getFullYear()}-${departureDate.getUTCMonth()+1}-${departureDate.getUTCDate()}T00:00:00&timeFrom=0&timeTo=24&carGrouping=DontGroup&getByLocalTime=true&specialPlacesDemand=StandardPlacesAndForDisabledPersons&carIssuingType=All&getTrainsFromSchedule=true`;
-    console.log(url)
     const response = await axios.get<RzdTrainPricing>(url);
     return response.data;
 }

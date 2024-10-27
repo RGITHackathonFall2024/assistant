@@ -1,6 +1,7 @@
 import { writeFileSync } from 'node:fs';
 import { rzdQueryStations, rzdQueryTickets } from '../src/apis/rzd';
 import { getListingById, getListings } from '../src/apis/rentals';
+import { messageTypes } from '../src/message_types';
 
 // Simplified types for easier processing
 export interface FunctionParameter {
@@ -97,14 +98,25 @@ function generateInstructions(): string {
 
 4. ЗАПРЕЩЕНО:
    - Отвечать обычным текстом
-   - Использовать функции которых нет в списке
+   - Использовать функции которые не доступны, только функции перечисленные выше
    - Делать follow_up без function_calls
    - Игнорировать ошибки функций
+   - Добавлять комментарии в JSON
 
 5. ВСЕГДА:
    - Проверяй все данные перед отправкой
    - Сообщай об ошибках пользователю
    - Используй короткие понятные сообщения
+
+6. ЧАСТЫЕ СЦЕНАРИИ
+    - Поиск ЖД билетов
+    1. Узнаём у пользователя дату, точку отправления (если не указано использовать точку user_info.location), и точку прибытия
+    2. Узнаём nodeId у станций использую rzdtrains.queryStations
+    3. С помощью rzdtrains.queryTickets получаем 5 наиболее подходящих билетов также с помощью button_url предлагаем пользователю перейти на сайт РЖД по url из ответа.
+    - Поиск квартиры
+    1. Вызываем rentals.getListings с нужными нам параметрами
+    2. Отображаем пользователю первые 3 вариант
+    3. С помощью button_url предлагаем перейти на сайт агрегатора
 `;
 }
 
@@ -169,45 +181,10 @@ ${config.functions.map(generateFunctionDocs).join('\n')}
 }
 
 // Example usage
-const sampleConfig: ConfigSchema = {
-    description: "созданный для помощи студентам",
-    messageTypes: [
-        {
-            name: "Текстовое сообщение",
-            description: "Базовое текстовое сообщение с поддержкой Markdown",
-            properties: {
-                type: {
-                    type: "string",
-                    description: "Указывает тип сообщения как текст, всегда должно быть \"text\"",
-                },
-                text: {
-                    type: "string",
-                    description: "Текст в формате Markdown",
-                    required: true
-                }
-            }
-        },
-        {
-            name: "Сообщение кнопка с ссылкой",
-            description: "Кнопка имеющая текст и ведущая на другой сайт",
-            properties: {
-                type: {
-                    type: "string",
-                    description: "Указывает тип сообщения как кнопка, всегда должно быть \"button_url\"",
-                },
-                text: {
-                    type: "string",
-                    description: "Текст кнопки",
-                    required: true
-                },
-                url: {
-                    type: "string",
-                    description: "Ссылка куда кнопка ведёт",
-                    required: true
-                }
-            }
-        }
-    ],
+export const config: ConfigSchema = {
+    assistantName: "Ранчер",
+    description: "ИИ-ассистент, созданный для помощи студентам",
+    messageTypes,
     functions: [
         rzdQueryStations,
         rzdQueryTickets,
@@ -216,9 +193,8 @@ const sampleConfig: ConfigSchema = {
     ]
 };
 
-
 // Generate and save the prompt
-const systemPrompt = generateSystemPrompt(sampleConfig);
-writeFileSync('system-prompt.md', systemPrompt, 'utf-8');
+const systemPrompt = generateSystemPrompt(config);
+writeFileSync('assistant-config.md', systemPrompt, 'utf-8');
 
 export { generateSystemPrompt };

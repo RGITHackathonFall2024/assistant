@@ -41,7 +41,7 @@ export class AIContextManager {
     private client: Groq;
     public baseMessages: ChatCompletionMessageParam[];
 
-    constructor(client: Groq, tools: Record<string, {handler: (args: any) => Promise<any>}>, model = " llama3-70b-8192") {
+    constructor(client: Groq, tools: Record<string, {handler: (args: any) => Promise<any>}>, model = "llama-3.1-70b-versatile") {
         this.tools = tools;
         this.model = model;
         this.baseMessages = [];
@@ -51,21 +51,20 @@ export class AIContextManager {
 
     async initialize(messages: ChatCompletionMessageParam[]): Promise<void> {
         // Load schema and configuration files
-        this.schema = await fs.readFile("assistant-schema.json", "utf-8");
+        //this.schema = await fs.readFile("assistant-schema.json", "utf-8");
         const config = await fs.readFile("assistant-config.md", "utf-8");
         
         this.baseMessages = [
             { role: 'system', content: config },
             { 
                 role: 'system', 
-                content: `Ты ассистент который отвечает только в JSON\nJSON должен быть следущей схемы: ${this.schema}`
+                content: `Ты ассистент который отвечает только в JSON\nСхема JSON указана в прошлом сообщений.\nОтвечай в JSON без комментариев, только чистый JSON код`
             },
             ...messages
         ];
     }
 
     private createChatRequest(messages: ChatCompletionMessageParam[]): ChatCompletionCreateParamsNonStreaming {
-        console.log(messages)
         return {
             messages,
             model: this.model,
@@ -97,10 +96,10 @@ export class AIContextManager {
                     response
                 };
             } catch (error) {
-                console.error(`[ERROR] Failed to execute ${functionName}:`, error);
+                console.error(`[ERROR] Failed to execute ${functionName}:`, error.message);
                 return {
                     function: functionName,
-                    response: "Function failsed to execute"
+                    response: "Function failed to execute"
                 }
             }
         }));

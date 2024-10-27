@@ -12,14 +12,14 @@ export class RealEstateApiClient {
     /**
      * Получить список объявлений
      * @param page Номер страницы (по умолчанию 1)
-     * @param limit Количество объявлений на странице (по умолчанию 20)
+     * @param limit Количество объявлений на странице (по умолчанию 5)
      * @param minPrice Минимальная цена фильтрации
      * @param maxPrice Максимальная цена фильтрации
      * @param minRooms Минимальное количество комнат
      * @param maxRooms Максимальное количество комнат
      * @returns Список объявлений, соответствующих фильтрам
      */
-    async getListings(page = 1, limit = 20, minPrice?: number, maxPrice?: number, minRooms?: number, maxRooms?: number) {
+    async getListings(page = 1, limit = 5, minPrice?: number, maxPrice?: number, minRooms?: number, maxRooms?: number) {
         const response = await this.apiClient.get('/api/listings', {
             params: {
                 page,

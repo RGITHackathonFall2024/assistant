@@ -4,63 +4,49 @@ import { getRZDSuggests, getRZDTrainPrices, rzdGetNode, simplifySuggests, simpli
 export const rzdQueryStations: FunctionSchemaWithHandler = {
     namespace: "rzdtrains",
     name: "queryStations",
-    description: "Поиск железнодорожных станций РЖД по запросу",
+    description: "Поиск железнодорожных станций РЖД по названию",
     parameters: {
         query: {
             type: "string",
             required: true,
-            description: "Поисковый запрос, например 'Москва' или 'Санкт-Петербург'"
+            description: "Название станции для поиска (например: 'Москва')"
         }
     },
     returns: {
         type: "array",
-        items: {
-            type: "object",
-            properties: {
-                // nodeId: {
-                //     type: "string",
-                //     required: true
-                // },
-                expressCode: {
-                    type: "string",
-                    required: true
-                },
-                region: {
-                    type: "string",
-                    required: true
-                },
-                name: {
-                    type: "string",
-                    required: true
-                }
-            }
+        properties: {
+            expressCode: { type: "string" },
+            region: { type: "string" },
+            name: { type: "string" }
         }
     },
     handler: async ({ query }) => {
         const suggests = await getRZDSuggests(query);
+        console.log("test query")
         return simplifySuggests(suggests);
     }
 };
 
+
 export const rzdQueryTickets: FunctionSchemaWithHandler = {
     namespace: "rzdtrains",
     name: "queryTickets",
-    description: "Поиск билетов на поезда РЖД",
+    description: "Поиск билетов на поезда РЖД между станциями",
     parameters: {
         origin: {
-            type: "number",
+            type: "string",
             required: true,
-            description: "ID станции отправления (expressCode)"
+            description: "Код/nodeId станции отправления"
         },
         destination: {
-            type: "number",
+            type: "string",
             required: true,
-            description: "ID станции прибытия (expressCode)"
+            description: "Код/nodeId станции прибытия"
         },
         departureDate: {
             type: "string",
             required: true,
-            description: "Дата отправления в формате DD.MM.YYYY"
+            description: "Дата отправления (формат: DD.MM.YYYY)"
         }
     },
     returns: {
@@ -68,81 +54,32 @@ export const rzdQueryTickets: FunctionSchemaWithHandler = {
         properties: {
             trains: {
                 type: "array",
-                items: {
-                    type: "object",
-                    properties: {
-                        display_name: {
-                            type: "string",
-                            required: true
-                        },
-                        url: {
-                            type: "string",
-                            required: true
-                        },
-                        origin: {
-                            type: "object",
-                            required: true,
-                            properties: {
-                                name: { type: "string", required: true },
-                                code: { type: "string", required: true }
-                            }
-                        },
-                        destination: {
-                            type: "object",
-                            required: true,
-                            properties: {
-                                name: { type: "string", required: true },
-                                code: { type: "string", required: true }
-                            }
-                        },
-                        prices: {
-                            type: "array",
-                            items: {
-                                type: "object",
-                                properties: {
-                                    type: { type: "string", required: true },
-                                    min_price: { type: "number", required: true },
-                                    max_price: { type: "number", required: true }
-                                }
-                            }
-                        },
-                        duration: {
-                            type: "string",
-                            required: true
-                        },
-                        distance: {
-                            type: "number",
-                            required: true
-                        },
-                        departure: {
-                            type: "object",
-                            required: true,
-                            properties: {
-                                local: { type: "string", required: true },
-                                normal: { type: "string", required: true }
-                            }
-                        },
-                        arrival: {
-                            type: "object",
-                            required: true,
-                            properties: {
-                                local: { type: "string", required: true },
-                                normal: { type: "string", required: true }
-                            }
+                description: "Список найденных поездов",
+                properties: {
+                    display_name: { type: "string" },
+                    url: { type: "string" },
+                    duration: { type: "string" },
+                    distance: { type: "number" },
+                    prices: {
+                        type: "array",
+                        properties: {
+                            type: { type: "string" },
+                            min_price: { type: "number" },
+                            max_price: { type: "number" }
                         }
                     }
                 }
             },
-            url: {
+            url: { 
                 type: "string",
-                required: true,
-                description: "Ссылка для просмотра всех билетов"
+                description: "Ссылка на страницу с полным списком билетов"
             }
         }
     },
     handler: async ({ origin, destination, departureDate }) => {
         const [day, month, year] = departureDate.split('.');
         const date = new Date(+year, +month - 1, +day);
+        console.log("gool", origin, destination)
         let originNode = await rzdGetNode(origin);
         let destinationNode = await rzdGetNode(destination);
         const result = await getRZDTrainPrices(+originNode.expressCode, +destinationNode.expressCode, date);
