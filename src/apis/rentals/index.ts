@@ -1,4 +1,4 @@
-import type { FunctionParameter, FunctionSchema, FunctionSchemaWithHandler } from "../../../cmd/old_generate_system_message";
+import type { FunctionParameter, FunctionSchema, FunctionSchemaWithHandler } from "../../../cmd/generate_system_message";
 import { RealEstateApiClient } from "./rentals";
 
 const client = new RealEstateApiClient("https://rentals.bethetka.ru")
@@ -49,7 +49,7 @@ export const getListings: FunctionSchemaWithHandler = {
             url: { type: "string", description: "Ссылка на агрегатора (предложи пользователю перейти на сайт)" },
         }
     },
-    handler: async ({ page = 1, limit = 3, minPrice, maxPrice, minRooms, maxRooms }) => {
+    handler: async ({ page = 1, limit = 3, minPrice, maxPrice, minRooms, maxRooms }: any) => {
         const response = await client.getListings(page, limit, minPrice, maxPrice, minRooms, maxRooms);
         return {
             total: response.total,
@@ -90,7 +90,7 @@ export const getListingById: FunctionSchemaWithHandler = {
             description: { type: "string" }
         }
     },
-    handler: async ({ id }) => {
+    handler: async ({ id }: any) => {
         const response = await client.getListingById(id);
         return response;
     }

@@ -96,7 +96,7 @@ export class AIContextManager {
                     response
                 };
             } catch (error) {
-                console.error(`[ERROR] Failed to execute ${functionName}:`, error.message);
+                console.error(`[ERROR] Failed to execute ${functionName}:`, (error as any).message);
                 return {
                     function: functionName,
                     response: "Function failed to execute"

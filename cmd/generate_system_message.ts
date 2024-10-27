@@ -22,6 +22,8 @@ export interface FunctionSchema {
     };
 }
 
+export type FunctionSchemaWithHandler = FunctionSchema & {handler: (data: any) => Promise<any>}
+
 export interface MessageType {
     name: string;
     type: string;

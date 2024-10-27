@@ -1,4 +1,4 @@
-import type { FunctionSchemaWithHandler } from "../../../cmd/old_generate_system_message";
+import type { FunctionSchemaWithHandler } from "../../../cmd/generate_system_message";
 import { getRZDSuggests, getRZDTrainPrices, rzdGetNode, simplifySuggests, simplifyTrainPricing } from "./rzd";
 
 export const rzdQueryStations: FunctionSchemaWithHandler = {
@@ -20,7 +20,7 @@ export const rzdQueryStations: FunctionSchemaWithHandler = {
             name: { type: "string" }
         }
     },
-    handler: async ({ query }) => {
+    handler: async ({ query }: any) => {
         const suggests = await getRZDSuggests(query);
         console.log("test query")
         return simplifySuggests(suggests);
@@ -76,7 +76,7 @@ export const rzdQueryTickets: FunctionSchemaWithHandler = {
             }
         }
     },
-    handler: async ({ origin, destination, departureDate }) => {
+    handler: async ({ origin, destination, departureDate }: any) => {
         const [day, month, year] = departureDate.split('.');
         const date = new Date(+year, +month - 1, +day);
         console.log("gool", origin, destination)
