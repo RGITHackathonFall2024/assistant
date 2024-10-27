@@ -36,12 +36,12 @@ export interface AIResponse {
 
 export class AIContextManager {
     private schema: string;
-    private tools: Record<string, {handler: (args: any) => Promise<any>}>;
+    private tools: Record<string, { handler: (args: any) => Promise<any> }>;
     private model: string;
     private client: Groq;
     public baseMessages: ChatCompletionMessageParam[];
 
-    constructor(client: Groq, tools: Record<string, {handler: (args: any) => Promise<any>}>, model = "llama-3.1-70b-versatile") {
+    constructor(client: Groq, tools: Record<string, { handler: (args: any) => Promise<any> }>, model = "llama-3.1-70b-versatile") {
         this.tools = tools;
         this.model = model;
         this.baseMessages = [];
@@ -53,11 +53,11 @@ export class AIContextManager {
         // Load schema and configuration files
         //this.schema = await fs.readFile("assistant-schema.json", "utf-8");
         const config = await fs.readFile("assistant-config.md", "utf-8");
-        
+
         this.baseMessages = [
             { role: 'system', content: config },
-            { 
-                role: 'system', 
+            {
+                role: 'system',
                 content: `Ты ассистент который отвечает только в JSON\nСхема JSON указана в прошлом сообщений.\nОтвечай в JSON без комментариев, только чистый JSON код`
             },
             ...messages
@@ -79,16 +79,16 @@ export class AIContextManager {
         };
     }
 
-    private async executeFunctionCalls(functionCalls: FunctionCall[]): Promise<Array<{function: string, response: any}>> {
+    private async executeFunctionCalls(functionCalls: FunctionCall[]): Promise<Array<{ function: string, response: any }>> {
         return await Promise.all(functionCalls.map(async (call) => {
             const functionName = `${call.namespace}.${call.name}`;
-            
+
             if (!(functionName in this.tools)) {
                 throw new Error(`Unknown function: ${functionName}`);
             }
-            
+
             console.log(`[TOOLS] Executing ${functionName}:`, call.args);
-            
+
             try {
                 const response = await this.tools[functionName].handler(call.args);
                 return {
@@ -105,41 +105,53 @@ export class AIContextManager {
         }));
     }
 
-    async execute(request: UserMessage | FollowUpMessage, messageCallback: (message: ChatCompletionMessageParam) => void = () => {}, messages: ChatCompletionMessageParam[] = this.baseMessages): Promise<ExecutionResult> {
-            
+    async execute(request: UserMessage | FollowUpMessage, messageCallback: (message: ChatCompletionMessageParam) => void = () => { }, messages: ChatCompletionMessageParam[] = this.baseMessages): Promise<ExecutionResult> {
+
         console.log(`[USER] Executing:`, request);
-        
+
         // Prepare chat request
         const chatRequest = this.createChatRequest([
             ...messages,
-            { role: 'user', content: JSON.stringify(request) }
+            { role: request.type == "user_message" ? 'user' : "system", content: JSON.stringify(request) }
         ]);
 
         // Get AI response
-        const completion = await this.client.chat.completions.create(chatRequest);
-        const aiResponse: AIResponse = JSON.parse(completion.choices[0].message.content!);
+        try {
+            const completion = await this.client.chat.completions.create(chatRequest);
 
-        if (messageCallback) messageCallback(completion.choices[0].message);
-        // Handle direct response
-        if (!aiResponse.follow_up) {
-            console.log(`[AI] Direct response:`, aiResponse.response);
-            return {
-                response: aiResponse.response,
-                messages: [...chatRequest.messages, {
-                    role: "assistant",
-                    content: JSON.stringify(aiResponse)
-                }]
-            };
+            const aiResponse: AIResponse = JSON.parse(completion.choices[0].message.content!);
+
+            if (messageCallback) messageCallback(completion.choices[0].message);
+            // Handle direct response
+            if (!aiResponse.follow_up) {
+                console.log(`[AI] Direct response:`, aiResponse.response);
+                return {
+                    response: aiResponse.response,
+                    messages: [...chatRequest.messages, {
+                        role: "assistant",
+                        content: JSON.stringify(aiResponse)
+                    }]
+                };
+            }
+
+            // Handle follow-up with function calls
+            console.log("[AI] Follow-up with function calls");
+            const functionResponses = await this.executeFunctionCalls(aiResponse.function_calls!);
+
+            // Recursive call with function responses
+            return this.execute({
+                type: "follow_up",
+                responses: functionResponses
+            }, messageCallback, chatRequest.messages);
         }
-
-        // Handle follow-up with function calls
-        console.log("[AI] Follow-up with function calls");
-        const functionResponses = await this.executeFunctionCalls(aiResponse.function_calls!);
-        
-        // Recursive call with function responses
-        return this.execute({
-            type: "follow_up",
-            responses: functionResponses
-        }, messageCallback, chatRequest.messages);
+        catch (e) {
+            return {
+                messages: [],
+                response: JSON.stringify({
+                    follow_up: false,
+                    responses: [{type: "text", text: "Возникла ошибка при обработке запроса, возможно у нас кончились токены в минуту, пожалуйста подождите"}, {type: "button_url", text: "Связь с тимлидом", url: "https://t.me/pmnullsqd"}]
+                })
+            }
+        }
     }
 }

@@ -2,6 +2,7 @@ import { writeFileSync } from 'node:fs';
 import { rzdQueryStations, rzdQueryTickets } from '../src/apis/rzd';
 import { getListingById, getListings } from '../src/apis/rentals';
 import { messageTypes } from '../src/message_types';
+import { getArticle1 } from '../src/apis/articles';
 
 // Simplified types for easier processing
 export interface FunctionParameter {
@@ -104,11 +105,15 @@ function generateInstructions(): string {
    - Делать follow_up без function_calls
    - Игнорировать ошибки функций
    - Добавлять комментарии в JSON
+   - ОТВЕЧАТЬ НА СВОИ ЗАПРОСЫ
+   - ДЕЛАТЬ ТО ЧТО ПОЛЬЗОВАТЕЛЬ НЕ ПРОСИЛ, к примеру пользователь попросил информацию о общежитии, ты ему ответил и всё больше ничего не отвечаешь.
 
 5. ВСЕГДА:
    - Проверяй все данные перед отправкой
    - Сообщай об ошибках пользователю
    - Используй короткие понятные сообщения
+   - При вызове follow_up запроса в тексте пиши что-то вроде "Получаю информацию о ..." и так далее.
+   - Делай что просит пользователь не больше, не пытайся быть умнее него
 
 6. ЧАСТЫЕ СЦЕНАРИИ
     - Поиск ЖД билетов
@@ -119,7 +124,13 @@ function generateInstructions(): string {
     1. Вызываем rentals.getListings с нужными нам параметрами
     2. Отображаем пользователю первые 3 вариант
     3. С помощью button_url предлагаем перейти на сайт агрегатора
-`;
+    - Помощь с общежитием
+    1. Благодаря api namespace articles тебе доступны различные статьи, ты можешь о них узнать из описания функций в namespace articles, для получения информации об общежитиях достаточно вызвать articles.article1 и получить информацию о заселение в общежитии.
+    2. Не просто выдавай текст пользователю а спрашивай у него к примеру какие у него болезни.
+
+# О ДОСТУПНЫХ API
+Тебе не доступны API ВУЗов, старайся на запросы на которые не можешь ответить говорить что-то вроде "Я ещё не обладаю такой функцией"
+`;  
 }
 
 function generateSystemPrompt(config: ConfigSchema): string {
@@ -190,8 +201,11 @@ export const config: ConfigSchema = {
     functions: [
         rzdQueryStations,
         rzdQueryTickets,
+
         getListings,
-        getListingById
+        getListingById,
+
+        getArticle1
     ]
 };
 
