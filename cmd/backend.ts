@@ -25,7 +25,7 @@ app.use(cors());
 
 io.on("connect", async (sock) => {
     const log = (...data: any) => console.log(`[socket:${sock.id}]`, ...data);
-    const ai = new AIContextManager(client, tools, "llama-3.1-8b-instant");
+    const ai = new AIContextManager(client, tools);
     let env_info = {
         current_date: new Date().toLocaleDateString("ru")
     };
@@ -40,13 +40,11 @@ io.on("connect", async (sock) => {
         log("Disconnected");
     });
 
-    sock.on("start_chat", async () => {
-        let hello = { role: "assistant", content: JSON.stringify({follow_up: false, response: [{type: "text", text: `Здравствуй ${user_info.name}, я Ранчер твой помощник от банка Центр-Инвест.`}]}) } satisfies ChatCompletionMessageParam;
-        await ai.initialize( [hello]);
-        sock.emit("new_message", hello);
-    });
-
     sock.on("message", async (text) => {
+        if (ai.baseMessages.length == 0) {
+            let hello = { role: "assistant", content: JSON.stringify({follow_up: false, response: [{type: "text", text: `Здравствуй ${user_info.name}, я Ранчер твой помощник от банка Центр-Инвест.`}]}) } satisfies ChatCompletionMessageParam;
+            await ai.initialize([hello]);   
+        }
         sock.emit("new_message", {role: "user", content: JSON.stringify({follow_up: false, response: [{type: "text", text}]})} satisfies ChatCompletionMessageParam);
         await ai.execute({
             content: text,

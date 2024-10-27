@@ -36,12 +36,12 @@ export interface AIResponse {
 
 export class AIContextManager {
     private schema: string;
-    private baseMessages: ChatCompletionMessageParam[];
     private tools: Record<string, {handler: (args: any) => Promise<any>}>;
     private model: string;
     private client: Groq;
+    public baseMessages: ChatCompletionMessageParam[];
 
-    constructor(client: Groq, tools: Record<string, {handler: (args: any) => Promise<any>}>, model = "llama-3.2-90b-vision-preview") {
+    constructor(client: Groq, tools: Record<string, {handler: (args: any) => Promise<any>}>, model = " llama3-70b-8192") {
         this.tools = tools;
         this.model = model;
         this.baseMessages = [];
@@ -65,10 +65,11 @@ export class AIContextManager {
     }
 
     private createChatRequest(messages: ChatCompletionMessageParam[]): ChatCompletionCreateParamsNonStreaming {
+        console.log(messages)
         return {
             messages,
             model: this.model,
-            temperature: 0.1,
+            temperature: 0.01,
             max_tokens: 8000,
             top_p: 1,
             stream: false,
@@ -105,9 +106,8 @@ export class AIContextManager {
         }));
     }
 
-    async execute(request: UserMessage | FollowUpMessage, messageCallback: (message: ChatCompletionMessageParam) => void = () => {}, context?: ChatCompletionMessageParam[]): Promise<ExecutionResult> {
-        const messages = context || this.baseMessages;
-        
+    async execute(request: UserMessage | FollowUpMessage, messageCallback: (message: ChatCompletionMessageParam) => void = () => {}, messages: ChatCompletionMessageParam[] = this.baseMessages): Promise<ExecutionResult> {
+            
         console.log(`[USER] Executing:`, request);
         
         // Prepare chat request

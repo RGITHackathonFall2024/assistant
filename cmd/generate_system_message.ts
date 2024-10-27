@@ -1,20 +1,13 @@
 import { writeFileSync } from 'node:fs';
 import { rzdQueryStations, rzdQueryTickets } from '../src/apis/rzd';
+import { getListingById, getListings } from '../src/apis/rentals';
 
-// Types for the function schem
-
-export interface FollowUpMessage {
-    type: "follow_up";
-    responses: any[];
-}
-
-// Previous types remain the same
-interface FunctionParameter {
+// Simplified types for easier processing
+export interface FunctionParameter {
     type: string;
     description?: string;
     required?: boolean;
     properties?: Record<string, FunctionParameter>;
-    items?: FunctionParameter;
 }
 
 export interface FunctionSchema {
@@ -25,217 +18,157 @@ export interface FunctionSchema {
     returns: {
         type: string;
         properties?: Record<string, FunctionParameter>;
-        items?: FunctionParameter;
     };
 }
 
-export type FunctionSchemaWithHandler = FunctionSchema & {handler: (data: any) => Promise<any>}
-
-interface MessageType {
+export interface MessageType {
     name: string;
+    type: string;
     description: string;
-    properties: Record<string, {
+    fields: Array<{
+        name: string;
         type: string;
         description: string;
-        required?: boolean;
+        required: boolean;
     }>;
 }
 
-interface ConfigSchema {
+export interface ConfigSchema {
+    assistantName: string;
     description: string;
     functions: FunctionSchema[];
     messageTypes: MessageType[];
 }
 
-// New function to generate JSON Schema
-function generateJsonSchema(config: ConfigSchema): any {
-    const schema: any = {
-        $schema: "http://json-schema.org/draft-07/schema#",
-        type: "object",
-        title: "Assistant Response",
-        required: ["follow_up", "response", "function_calls"],
-        properties: {
-            follow_up: {
-                type: "boolean",
-                title: "Follow Up",
-                description: "Indicates if a function response is expected"
-            },
-            response: {
-                type: "array",
-                title: "Response Messages",
-                items: {
-                    oneOf: config.messageTypes.map(msgType => generateMessageTypeSchema(msgType))
-                }
-            },
-            function_calls: {
-                type: "array",
-                title: "Function Calls",
-                items: {
-                    type: "object",
-                    required: ["namespace", "name", "args"],
-                    properties: {
-                        namespace: {
-                            type: "string",
-                            enum: [...new Set(config.functions.map(f => f.namespace))]
-                        },
-                        name: {
-                            type: "string",
-                            enum: config.functions.map(f => f.name)
-                        },
-                        args: {
-                            type: "object"
-                        }
-                    }
-                }
-            }
-        }
-    };
-
-    // Add message type definitions
-    schema.$defs = {};
-    config.messageTypes.forEach(msgType => {
-        schema.$defs[getSchemaTypeName(msgType.name)] = generateMessageTypeSchema(msgType);
-    });
-
-    // Add function parameter and return type definitions
-    config.functions.forEach(func => {
-        const paramSchema = convertToJsonSchema(func.parameters);
-        const returnSchema = convertToJsonSchema(func.returns);
-        
-        schema.$defs[`${func.namespace}_${func.name}_params`] = paramSchema;
-        schema.$defs[`${func.namespace}_${func.name}_returns`] = returnSchema;
-    });
-
-    return schema;
-}
-
-function generateMessageTypeSchema(msgType: MessageType): any {
-    return {
-        type: "object",
-        title: msgType.name,
-        description: msgType.description,
-        required: Object.entries(msgType.properties)
-            .filter(([_, prop]) => prop.required !== false)
-            .map(([key]) => key),
-        properties: Object.entries(msgType.properties).reduce((acc, [key, prop]) => ({
-            ...acc,
-            [key]: {
-                type: prop.type,
-                description: prop.description,
-                title: toTitleCase(key)
-            }
-        }), {})
-    };
-}
-
-function convertToJsonSchema(param: any): any {
-    if (!param) return { type: "null" };
-
-    const schema: any = { type: param.type };
+function generateBasicJsonSchema(messageType: MessageType): string {
+    const fields = messageType.fields
+        .map(field => `    "${field.name}": "${field.type}"${field.required ? '' : '?'} // ${field.description}`)
+        .join(',\n');
     
-    if (param.description) {
-        schema.description = param.description;
-    }
-
-    if (param.properties) {
-        schema.properties = {};
-        schema.required = [];
-        
-        Object.entries(param.properties).forEach(([key, prop]: [string, any]) => {
-            schema.properties[key] = convertToJsonSchema(prop);
-            if (prop.required !== false) {
-                schema.required.push(key);
-            }
-        });
-    }
-
-    if (param.items) {
-        schema.items = convertToJsonSchema(param.items);
-    }
-
-    return schema;
+    return `{
+${fields}
+}`;
 }
 
-function getSchemaTypeName(name: string): string {
-    return name.replace(/\s+/g, '');
+function generateFunctionDocs(func: FunctionSchema): string {
+    return `### ${func.namespace}.${func.name}
+${func.description}
+
+Параметры:
+\`\`\`json
+${JSON.stringify(func.parameters, null, 2)}
+\`\`\`
+
+Возвращает:
+\`\`\`json
+${JSON.stringify(func.returns, null, 2)}
+\`\`\`
+`;
 }
 
-function toTitleCase(str: string): string {
-    return str
-        .split('_')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ');
-}
+function generateInstructions(): string {
+    return `
+ВАЖНЫЕ ПРАВИЛА:
+1. ВСЕГДА отвечай в формате JSON
+2. Каждый ответ должен содержать:
+   - "follow_up": true/false
+   - "response": массив сообщений
+   - "function_calls": массив вызовов функций
 
-function generateMarkdown(config: ConfigSchema): string {
-    let md = `# Конфигурация ассистента
-Вы - Ранчер, ИИ-ассистент, ${config.description}. Все ответы предоставляются исключительно в формате JSON согласно определённым схемам.
-
-# Формат ответа
-Каждый ответ должен следовать следующей базовой структуре:
+3. СТРУКТУРА ОТВЕТА:
 \`\`\`json
 {
-    "follow_up": boolean,    // требуется ли ожидание ответа от функции
-    "response": MessageEntity[], // массив сообщений
-    "function_calls": FunctionCall[] // массив вызовов функций
+    "follow_up": boolean,    // нужно ли ждать ответа от функции
+    "response": [            // массив сообщений
+        {
+            "type": "text",  // или другой тип
+            ...остальные поля
+        }
+    ],
+    "function_calls": [      // вызовы функций
+        {
+            "namespace": "string",
+            "name": "string",
+            "args": {}
+        }
+    ]
 }
 \`\`\`
 
-# Типы сообщений\n`;
+4. ЗАПРЕЩЕНО:
+   - Отвечать обычным текстом
+   - Использовать функции которых нет в списке
+   - Делать follow_up без function_calls
+   - Игнорировать ошибки функций
 
-    // Generate message types documentation
-    config.messageTypes.forEach(msgType => {
-        md += `\n## ${msgType.name}\n${msgType.description}\n\`\`\`json\n{\n`;
-        Object.entries(msgType.properties).forEach(([key, prop]) => {
-            md += `    "${key}": ${prop.type}${prop.required === false ? '?' : ''}`;
-            if (prop.description) {
-                md += `  // ${prop.description}`;
-            }
-            md += '\n';
-        });
-        md += '}\n\`\`\`\n';
-    });
-
-    // Generate functions documentation
-    md += '\n# Доступные функции\n';
-    
-    config.functions.forEach(func => {
-        md += `\n## ${func.namespace}.${func.name}\n`;
-        md += `${func.description}\n\n`;
-        
-        // Parameters
-        md += '### Параметры:\n```json\n';
-        md += JSON.stringify(func.parameters, null, 4);
-        md += '\n```\n';
-        
-        // Return type
-        md += '\n### Структура ответа:\n```json\n';
-        md += JSON.stringify(func.returns, null, 4);
-        md += '\n```\n';
-    });
-
-    md += '\n# Доп правила\n';
-    md += `# Важные правила форматирования ответов
-
-# Правила валидации ответа
-Перед отправкой ответа убедитесь, что:
-1. Все временные метки корректно преобразованы в Unix timestamp
-2. Если информации недостаточно не отправляйте больше запросов follow_up просто ответьте к примеру "Я не нашёл билетов на эту дату, возможно вы хотите изменить дату?" и всё, ожидайте информации от пользователя.
-3. Если вы хотите узнать информацию например о станциях или билетах вызывайте доступные вам функции в follow_up запросах тогда вы получите ответ в свой промпт.
-4. Не вызывай follow_up без функций
-5. Если получил пустой массив или ошибку оповести пользователя об ошибке.
-6. Предлагай пользователю переходить на сторонние ссылки к примеру на страницу с билетами
-7. Не предлагай пользователю использовать функции которых у тебя нет, к примеру ты не можешь покупать билеты ты можешь их только отображать значит не пиши "Выберите подходящий вариант билета:" пиши "Вот какие билеты я смог найти"
-8. Не делай больших сообщений, например вместо того чтобы выводить все найденные билеты предлагай пользователю перейти на сайт агрегатора который ты получаешь вместе с "rzdtrains.queryTickets"
-# Частые сценарии 
-- Посмотреть билеты из точки А (или точки user_info.location) в точку B
-> Для этого нужно получить ID станций для этого нужно вызвать "rzdtrains.queryStations", далее указываем ID наиболее подходящих станций в "rzdtrains.queryTickets"
-
-`
-
-    return md;
+5. ВСЕГДА:
+   - Проверяй все данные перед отправкой
+   - Сообщай об ошибках пользователю
+   - Используй короткие понятные сообщения
+`;
 }
 
+function generateSystemPrompt(config: ConfigSchema): string {
+    const prompt = `# ${config.assistantName}
+${config.description}
+
+${generateInstructions()}
+
+# Доступные типы сообщений:
+${config.messageTypes.map(type => `
+## ${type.name}
+${type.description}
+\`\`\`json
+${generateBasicJsonSchema(type)}
+\`\`\`
+`).join('\n')}
+
+# Доступные функции:
+${config.functions.map(generateFunctionDocs).join('\n')}
+
+# Примеры использования:
+
+1. Простой ответ:
+\`\`\`json
+{
+    "follow_up": false,
+    "response": [
+        {
+            "type": "text",
+            "text": "Привет! Чем могу помочь?"
+        }
+    ],
+    "function_calls": []
+}
+\`\`\`
+
+2. Запрос данных:
+\`\`\`json
+{
+    "follow_up": true,
+    "response": [
+        {
+            "type": "text",
+            "text": "Ищу информацию..."
+        }
+    ],
+    "function_calls": [
+        {
+            "namespace": "example",
+            "name": "getData",
+            "args": {
+                "id": "123"
+            }
+        }
+    ]
+}
+\`\`\`
+`;
+
+    return prompt;
+}
+
+// Example usage
 const sampleConfig: ConfigSchema = {
     description: "созданный для помощи студентам",
     messageTypes: [
@@ -277,16 +210,15 @@ const sampleConfig: ConfigSchema = {
     ],
     functions: [
         rzdQueryStations,
-        rzdQueryTickets
+        rzdQueryTickets,
+        getListings,
+        getListingById
     ]
 };
 
-// Generate the markdown
-const markdown = generateMarkdown(sampleConfig);
-const jsonSchema = generateJsonSchema(sampleConfig);
 
-// Save to file (optional)
-writeFileSync('assistant-config.md', markdown, 'utf-8');
-writeFileSync('assistant-schema.json', JSON.stringify(jsonSchema, null, 2), 'utf-8');
+// Generate and save the prompt
+const systemPrompt = generateSystemPrompt(sampleConfig);
+writeFileSync('system-prompt.md', systemPrompt, 'utf-8');
 
-export { generateMarkdown, generateJsonSchema };
+export { generateSystemPrompt };

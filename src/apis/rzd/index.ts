@@ -1,4 +1,4 @@
-import type { FunctionSchemaWithHandler } from "../../../cmd/generate_system_message";
+import type { FunctionSchemaWithHandler } from "../../../cmd/old_generate_system_message";
 import { getRZDSuggests, getRZDTrainPrices, rzdGetNode, simplifySuggests, simplifyTrainPricing } from "./rzd";
 
 export const rzdQueryStations: FunctionSchemaWithHandler = {

@@ -22,7 +22,7 @@ let hello = { role: "assistant", content: JSON.stringify({follow_up: false, resp
 await ai.initialize([hello]);
 console.log(await ai.execute({
     type: "user_message",
-    content: "Посмотри билеты из Москвы в Питер на послезавтра",
+    content: "Привет как дела!",
     env_info,
     user_info
 }))
